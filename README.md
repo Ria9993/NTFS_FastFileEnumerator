@@ -16,8 +16,13 @@ MS의 NTFS에 대한 자료 공개가 적어서 어려움이 있음.
 구현 자체는 하루 걸림.  
 일단 기본 구현은 끝났는데, $FILENAME 타입이 POSIX namespace인 경우 파일이름이 깨지는 문제가 있음.  
 그리고 성능 올릴 방법도 생각해야 되는데 일단 나중에  
-
 https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/7c92d09b-41cf-43dc-a03a-4510290324b4  
+
+### 2024-06-15
+멀티스레드로 대충 구현해둠.  
+프로파일링 해봤을 때, 파일IO 자체가 오래 걸리는게 아니였어서  
+인코딩도 별도 처리없이 바이너리로 저장하게 바꾸고  
+거의 1~4초로 6배 가량 빨라짐  
 
 # Reference
 ### MSDN (Not trusted because regular updates are stopped)
