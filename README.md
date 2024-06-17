@@ -27,6 +27,11 @@ https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/d082e207-e1d3
 
 https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/57ad570a-6a7d-456f-83ec-600f9bd20667
 
+## 2024-06-17
+1TB SSD 파일 250만개에서 대충 5.9초 정도 소요되는데  
+50%가 파일 읽을 때의 버퍼 할당이라 파일을 맵핑해서 쓰는게 나아보임.  
+시간날 때 수정할 예정  
+![image](https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/a31c3c4a-305b-4879-b750-3b74c6b77630)
 
 # Reference
 ### MSDN (Not trusted because regular updates are stopped)
