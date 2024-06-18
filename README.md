@@ -54,8 +54,14 @@ Path까지 포함하는 절대경로를 알아내려면 Parent Directory Referen
 성공.  
 별도 매핑은 안 했고, $MFT의 파편화된 전체 데이터를 연속적으로 메모리에 올린 다음,  
 코어 개수만큼의 스레드가 n개로 분할하여 부모 디렉토리 역참조 작업.  
+
 사진은 바탕화면의 pdf파일을 제대로 역참조 한 것  
 ![image](https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/f141eec8-4207-4040-9842-0190e24298e2)  
+
+CPU 타임도 절반은 경로 출력에 사용하고 있고 더 이상의 최적화는 무의미할 듯함.  
+여기서 드랍.  
+![image](https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/3587e292-163e-4b6f-a28c-40690467c5d6)
+
 
 
 
