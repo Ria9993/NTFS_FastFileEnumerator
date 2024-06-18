@@ -38,6 +38,12 @@ https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/57ad570a-6a7d
 시간날 때 수정할 예정  
 ![image](https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/a31c3c4a-305b-4879-b750-3b74c6b77630)
 
+## 2024-06-18
+CreateFileMapping, MapViewOfFile 이런 api 문서를 봤는데  
+파일 전체나 특정 크기를 commit or reserve 하는 모양.  
+나는 볼륨 자체를 다루는거라 다 담는 건 불가능하고 특정 범위만 매핑해야 해서 좀 더 봐야할 듯.  
+그리고 이미 커널에서 MFT를 캐싱을 어떻게든 해놨을 것 같아서, 이걸 not-buffered 해버리거나 매핑해버리면 어떻게 될 지 모르겠어서 복잡.  
+
 # Reference  
 MS는 독점 기술 NTFS에 대한 스펙 문서를 공개 및 업데이트하지 않고 있습니다.  
 따라서 파편화된 공식 문서들과 Linux진영의 NTFS 라이브러리, 포렌식 커뮤니티의 비공식 서드파티 문서를 참조합니다.  
