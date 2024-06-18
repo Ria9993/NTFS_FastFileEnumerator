@@ -21,16 +21,16 @@
 LONGLONG ExtractLowerBytesSigned(LONGLONG val, BYTE nBytesExtract);
 
 /** Iterate and print file records
- *  
+ *
  *  @param lpParm   [in] Pointer of IterateFileRecordsParam
 */
 unsigned __stdcall IterateFileRecords(LPVOID lpParm);
 
 struct IterateFileRecordsParam {
     HANDLE               hDrive;
-    QWORD                LCN;
+    QWORD                ClustorNumber;
     LONGLONG             RecordCount;
-    std::vector<BYTE>*   OutStream;
+    std::vector<BYTE>* OutStream;
 };
 
 
@@ -152,10 +152,10 @@ int wmain(int argc, wchar_t** argv)
             //runIterThreads_OutStreamList.back()->imbue(utf16_locale);
 
             IterateFileRecordsParam param;
-            param.OutStream   = runIterThreads_OutStreamList.back();
-            param.hDrive      = hDrive;
-            param.LCN         = currentLCN;
-            param.RecordCount = runLength;
+            param.OutStream = runIterThreads_OutStreamList.back();
+            param.hDrive = hDrive;
+            param.ClustorNumber = currentLCN;
+            param.RecordCount = runLength * (((QWORD)gBytesPerSector * gSectorsPerCluster) / gBytesPerFileRecord);
             HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, IterateFileRecords, &param, STACK_SIZE_PARAM_IS_A_RESERVATION, NULL);
             if (hThread == (HANDLE)0 || hThread == (HANDLE)-1L) {
                 ExitErrorWinApi("_beginthreadex failed.");
@@ -219,14 +219,14 @@ LONGLONG ExtractLowerBytesSigned(LONGLONG val, BYTE nBytesExtract)
 unsigned __stdcall IterateFileRecords(LPVOID lpParm)
 {
     IterateFileRecordsParam* Param = (IterateFileRecordsParam*)lpParm;
-    HANDLE              hDrive      = Param->hDrive;
-    QWORD               currentLCN  = Param->LCN;
+    HANDLE              hDrive = Param->hDrive;
+    QWORD               currentLCN = Param->ClustorNumber;
     LONGLONG            recordCount = Param->RecordCount;
-    std::vector<BYTE>&  outStream   = *Param->OutStream;
+    std::vector<BYTE>& outStream = *Param->OutStream;
 
 
     const QWORD loc_currentLogicalCluster = currentLCN * gBytesPerSector * gSectorsPerCluster;
-    const QWORD nBytesRunContent = recordCount * gBytesPerSector * gSectorsPerCluster;
+    const QWORD nBytesRunContent = recordCount * gBytesPerFileRecord;
     assert(loc_currentLogicalCluster >= 0);
     assert(nBytesRunContent >= 0);
 
@@ -240,7 +240,7 @@ unsigned __stdcall IterateFileRecords(LPVOID lpParm)
     hOverlapped.Offset = (DWORD)(loc_currentLogicalCluster & 0xFFFFFFFF);
     hOverlapped.OffsetHigh = (DWORD)((loc_currentLogicalCluster >> 32) & 0xFFFFFFFF);
     DWORD nBytesRead;
-    if (!ReadFile(hDrive, runContent.get(), nBytesRunContent, &nBytesRead, &hOverlapped)) {
+    if (!ReadFile(hDrive, runContent.get(), (DWORD)nBytesRunContent, &nBytesRead, &hOverlapped)) {
         ExitErrorWinApi("Failed to read $MFT's MFT data run list.");
     }
 
@@ -252,6 +252,8 @@ unsigned __stdcall IterateFileRecords(LPVOID lpParm)
     {
         NTFS_FileRecordHeader* currentRecord_Header = (NTFS_FileRecordHeader*)pCurrentRecord;
         if (strncmp((LPSTR)currentRecord_Header->Signature, "FILE", sizeof(currentRecord_Header->Signature)) != 0) {
+            std::wcout << "[LOG] Detected wrong MFT entry signature." << std::endl;
+            std::wcout << ":: Number = " << ((size_t)pCurrentRecord - (size_t)runContent.get()) / gBytesPerFileRecord << "  EndNum = " << (size_t)nBytesRunContent / gBytesPerFileRecord << std::endl;
             if (strncmp((LPSTR)currentRecord_Header->Signature, "BAAD", sizeof(currentRecord_Header->Signature)) != 0) {
                 std::wcout << "[LOG] Detected BAAD MFT entry." << std::endl;
                 continue;
