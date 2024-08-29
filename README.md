@@ -1,10 +1,12 @@
 # NTFS_FastFileEnumerator
 윈도우 NTFS(New Technology File System)의 모든 파일 목록을 고성능으로 열거합니다.
 
-# Note
+## Preview
+![image](https://github.com/Ria9993/NTFS_FastFileEnumerator/assets/44316628/f141eec8-4207-4040-9842-0190e24298e2)  
+
+## Note
 `NTFS_Structure.h`를 포함한 해당 프로젝트의 모든 소스코드는 직접 작성된 코드입니다.   
 따라서 기술적 유효성을 보장하지 않으며 각 버젼에 대한 필드 값 검증이 동반되어야 합니다.  
-
 
 # Development Log
 ### 2024-06-11  
@@ -17,6 +19,9 @@ MS의 NTFS에 대한 자료 공개가 적어서 어려움이 있음.
 최근 접근한 페이지가 아니면 지연시키는 방법도 생각했으나 MFT entry 자체가 1KB라서 별로 소용 없을거라 생각하고 드랍.  
 
 ### 2024-06-13
+![image](https://github.com/user-attachments/assets/7b1bb083-0762-475b-9145-9eaee177c0bc)  
+그냥 hxd로 디스크를 직접 열어서 분석
+
 구현 자체는 하루 걸림.  
 일단 기본 구현은 끝났는데, $FILENAME 타입이 POSIX namespace인 경우 파일이름이 깨지는 문제가 있음.  
 그리고 성능 올릴 방법도 생각해야 되는데 일단 나중에  
