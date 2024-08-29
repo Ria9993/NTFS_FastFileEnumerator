@@ -10,7 +10,7 @@
 
 # Development Log
 ### 2024-06-11  
-WinAPI는 너무 느려서, 물리 디스크 자체를 바이너리로 읽어와서 분석하기로 결정.  
+WinAPI는 너무 느려서, 물리 디스크 자체를 바이너리로 읽어 오는 것으로 결정.  
 파일 시스템이나 NTFS에 대한 지식이 없어서 명세를 찾아보기 시작.  
 MS의 NTFS에 대한 자료 공개가 적어서 어려움이 있음.  
 
@@ -19,7 +19,7 @@ MS의 NTFS에 대한 자료 공개가 적어서 어려움이 있음.
 최근 접근한 페이지가 아니면 지연시키는 방법도 생각했으나 MFT entry 자체가 1KB라서 별로 소용 없을거라 생각하고 드랍.  
 
 ### 2024-06-13
-![image](https://github.com/user-attachments/assets/7b1bb083-0762-475b-9145-9eaee177c0bc)  
+![image](https://github.com/user-attachments/assets/5c8f6713-e59c-411a-aa36-4a7e9e5faea5)  
 그냥 hxd로 디스크를 직접 열어서 분석
 
 구현 자체는 하루 걸림.  
