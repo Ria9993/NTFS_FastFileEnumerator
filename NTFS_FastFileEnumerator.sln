@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35122.118
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NTFS_FastFileEnumerator", "NTFS_FastFileEnumerator.vcxproj", "{2E54C772-4BED-40F4-853A-B6308D0301FA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2E54C772-4BED-40F4-853A-B6308D0301FA}.Debug|x64.ActiveCfg = Debug|x64
+		{2E54C772-4BED-40F4-853A-B6308D0301FA}.Debug|x64.Build.0 = Debug|x64
+		{2E54C772-4BED-40F4-853A-B6308D0301FA}.Release|x64.ActiveCfg = Release|x64
+		{2E54C772-4BED-40F4-853A-B6308D0301FA}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {506A52B7-B404-468B-8677-FBAAF47F1147}
+	EndGlobalSection
+EndGlobal

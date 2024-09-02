@@ -29,7 +29,7 @@ unsigned __stdcall IterateFileRecords(LPVOID lpParm);
 struct IterateFileRecordsParam {
     BYTE*                FileRecords_Raw;
     QWORD                ClustorNumber;
-    QWORD                RecordCount;
+    QWORD                ClusterCount;
     std::vector<BYTE>*   OutStream;
 };
 
@@ -56,6 +56,7 @@ int wmain(int argc, wchar_t** argv)
 
 
     // Read NTFS boot sector
+    std::wcout << "Read NTFS boot sector..." << std::endl;
     NTFS_BootSector bootSector{};
     {
         DWORD nBytesRead;
@@ -74,6 +75,7 @@ int wmain(int argc, wchar_t** argv)
     const LONG   loc_$MFT_FileRecord_low = loc_$MFT_FileRecord & 0xFFFFFFFF;
 
     // Read $MFT's file record content
+    std::wcout << "Read $MFT's file record content..." << std::endl;
     std::unique_ptr<char[]> $MFT_FileRecord_Raw = std::make_unique<char[]>(gBytesPerFileRecord);
     {
         OVERLAPPED hOverlapped;
@@ -93,6 +95,7 @@ int wmain(int argc, wchar_t** argv)
 
 
     // Find $DATA attribute from $MFT Attribute chain
+    std::wcout << "Find $DATA attribute from $MFT Attribute chain..." << std::endl;
     NTFS_FileRecord_AttrHeader* $MFT_FileRecord_DataAttr = NULL;
     {
         NTFS_FileRecord_AttrHeader* loc_$MFT_FileRecord_FirstAttribute = (NTFS_FileRecord_AttrHeader*)((SIZE_T)$MFT_FileRecord_Header + $MFT_FileRecord_Header->FirstAttributeOffset);
@@ -113,6 +116,7 @@ int wmain(int argc, wchar_t** argv)
 
 
     // Read content of $DATA attribute
+    std::wcout << "Read content of $DATA attribute..." << std::endl;
     assert($MFT_FileRecord_DataAttr->Flags == 0 || $MFT_FileRecord_DataAttr->Flags == ATTRIBUTE_FLAG_SPARSE);
     if ($MFT_FileRecord_DataAttr->FormCode == eNTFS_FileRecord_AttrHeader_FormCode::RESIDENT_FORM)
     {
@@ -127,6 +131,7 @@ int wmain(int argc, wchar_t** argv)
         assert($MFT_FileRecord_DataAttr->Form.Nonresident.CompressionUnitSize == 0); //< Only handle the uncompressed data.
 
         // Search runlists(mapping pairs)
+        std::wcout << "Search runlists(mapping pairs)..." << std::endl;
         std::vector<IterateFileRecordsParam> runIterThreads_RunParamList;
         QWORD  currentLCN = 0;
         QWORD  nBytesTotalRunContent = 0;
@@ -145,7 +150,7 @@ int wmain(int argc, wchar_t** argv)
             }
             const LONGLONG runLength = ExtractLowerBytesSigned(*((LONGLONG*)(pRunlist)), nBytesRunLength);
             const LONGLONG runOffset = ExtractLowerBytesSigned(*((LONGLONG*)(pRunlist + nBytesRunLength)), nBytesRunOffset); //< Can be negative
-            assert(runLength >= 0); //< Idk it can be negative
+            assert(runLength >= 0); //< Idk it can be negative too.
 
             pRunlist += (SIZE_T)nBytesRunLength + nBytesRunOffset;
             currentLCN += runOffset;
@@ -156,11 +161,12 @@ int wmain(int argc, wchar_t** argv)
             param.FileRecords_Raw = NULL;
             param.OutStream = NULL;
             param.ClustorNumber = currentLCN;
-            param.RecordCount = runLength * ((gBytesPerCluster) / gBytesPerFileRecord);
+            param.ClusterCount = runLength;
             runIterThreads_RunParamList.push_back(param);
         }
 
-        // Read all file records (as FILE_FLAG_OVERLAPPED)
+        // Load all file records into memory (as FILE_FLAG_OVERLAPPED)
+        std::wcout << "Load all file records into memory..." << std::endl;
         hDrive = CreateFileW(diskPath, GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
         if (hDrive == INVALID_HANDLE_VALUE) {
             ExitErrorWinApi("Need administrator permission.");
@@ -184,14 +190,14 @@ int wmain(int argc, wchar_t** argv)
                 overlapped.hEvent = hEvent;
                 overlapped.Offset     = (DWORD)((paramIt.ClustorNumber * gBytesPerCluster) & 0xFFFFFFFF);
                 overlapped.OffsetHigh = (DWORD)(((paramIt.ClustorNumber * gBytesPerCluster) >> 32) & 0xFFFFFFFF);
-                assert((QWORD)paramIt.RecordCount * gBytesPerFileRecord <= MAXDWORD);
-                if (!ReadFile(hDrive, fileRecords_Raw.get() + nBytesReadOffset, (DWORD)paramIt.RecordCount * gBytesPerFileRecord, &fileReadLengthList.back(), &overlapped)) {
+                assert((QWORD)paramIt.ClusterCount * gBytesPerCluster <= MAXDWORD);
+                if (!ReadFile(hDrive, fileRecords_Raw.get() + nBytesReadOffset, (DWORD)paramIt.ClusterCount * gBytesPerCluster, &fileReadLengthList.back(), &overlapped)) {
                     if (GetLastError() != ERROR_IO_PENDING) {
                         ExitErrorWinApi("Failed ReadFile()");
                     }
                 }
 
-                nBytesReadOffset += paramIt.RecordCount * gBytesPerFileRecord;
+                nBytesReadOffset += paramIt.ClusterCount * gBytesPerCluster;
             }
             assert(fileReadEvents.size() <= MAXDWORD);
             if (WaitForMultipleObjects((DWORD)fileReadEvents.size(), fileReadEvents.data(), TRUE, INFINITE) == WAIT_FAILED) {
@@ -209,23 +215,29 @@ int wmain(int argc, wchar_t** argv)
             SYSTEM_INFO sysinfo;
             GetSystemInfo(&sysinfo);
             const int numCpuCore  = sysinfo.dwNumberOfProcessors;
-            const QWORD numThread = numCpuCore; //< or x2
+            const QWORD nThreadMax = numCpuCore; //< or x2
 
-            const QWORD totalRecordClusterCount = nBytesTotalRunContent / gBytesPerCluster;
-            const QWORD numRecordClusterPerThread = totalRecordClusterCount / numThread;
-            const QWORD numRecordClusterPerThread_Remain = totalRecordClusterCount % numThread;
+            const QWORD nRecordPerCluster = gBytesPerCluster / gBytesPerFileRecord;
 
-            for (size_t i = 0; i < numThread; i++)
+            assert(nBytesTotalRunContent % gBytesPerCluster == 0);
+            const QWORD totalRecordClusterCount          = nBytesTotalRunContent / gBytesPerCluster;
+            const QWORD numRecordClusterPerThread        = totalRecordClusterCount / nThreadMax;
+            const QWORD numRecordClusterPerThread_Remain = totalRecordClusterCount % nThreadMax;
+            
+            QWORD clusterOffset = 0;
+            for (size_t threadIdx = 0; threadIdx < nThreadMax; threadIdx++)
             {
                 IterateFileRecordsParam* param = new IterateFileRecordsParam();
                 param->FileRecords_Raw = fileRecords_Raw.get();
-                param->ClustorNumber = i * numRecordClusterPerThread;
-                param->RecordCount = numRecordClusterPerThread * (gBytesPerCluster / gBytesPerFileRecord);
-                if (i == numThread - 1) {
-                    param->RecordCount += numRecordClusterPerThread_Remain;
+                param->ClustorNumber = clusterOffset;
+                param->ClusterCount = numRecordClusterPerThread;
+                if (threadIdx < numRecordClusterPerThread_Remain) {
+                    param->ClusterCount += 1;
                 }
                 runIterThreads_OutStreamList.push_back(new std::vector<BYTE>());
                 param->OutStream = runIterThreads_OutStreamList.back();
+
+                clusterOffset += param->ClusterCount / nRecordPerCluster;
 
                 runIterThreads_ParamList.push_back(param);
                 HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, IterateFileRecords, param, STACK_SIZE_PARAM_IS_A_RESERVATION, NULL);
@@ -235,9 +247,10 @@ int wmain(int argc, wchar_t** argv)
 
                 runIterThreadList.push_back(hThread);
 
-                std::wcout << "[LOG]Begin runlist entry thread: " << i << std::endl;
+
+                std::wcout << "[LOG]Begin runlist entry thread: " << threadIdx << std::endl;
             }
-            if (WaitForMultipleObjects(numThread, runIterThreadList.data(), TRUE, INFINITE) == WAIT_FAILED) {
+            if (WaitForMultipleObjects((DWORD)nThreadMax, runIterThreadList.data(), TRUE, INFINITE) == WAIT_FAILED) {
                 ExitErrorWinApi("Failed to wait for runlist entry threads.");
             }
 
@@ -299,7 +312,7 @@ unsigned __stdcall IterateFileRecords(LPVOID lpParm)
 
     // Iterate file records
     LPBYTE pCurrentRecord            = (LPBYTE)Param->FileRecords_Raw + (Param->ClustorNumber * gBytesPerCluster);
-    LPBYTE loc_RecordIteration_End   = (LPBYTE)pCurrentRecord + (Param->RecordCount * gBytesPerFileRecord);
+    LPBYTE loc_RecordIteration_End   = (LPBYTE)pCurrentRecord + (Param->ClusterCount * gBytesPerFileRecord);
     for (; pCurrentRecord < loc_RecordIteration_End; pCurrentRecord += gBytesPerFileRecord)
     {
         NTFS_FileRecordHeader* currentRecord_Header = (NTFS_FileRecordHeader*)pCurrentRecord;
@@ -331,6 +344,7 @@ unsigned __stdcall IterateFileRecords(LPVOID lpParm)
             }
         }
         if (pFileNameAttr == NULL) {
+            // [End of cluster] or [Empty space of cluster]
             //std::wcout << "[No Name]" << std::endl;
             continue;
         }
